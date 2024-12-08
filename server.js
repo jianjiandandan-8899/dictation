@@ -103,22 +103,39 @@ app.get('/translate/:word', async (req, res) => {
         const data = response.data;
         
         // 获取词性和释义
-        if (data?.ec?.word?.[0]?.trs) {
+        if (data?.ec?.word?.[0]) {
             const entries = data.ec.word[0];
-            // 获取音标（如果有）
+            const parts = [];
+
+            // 获取音标
             const phonetic = entries.ukphone ? `英 [${entries.ukphone}]` : '';
             const usphone = entries.usphone ? `美 [${entries.usphone}]` : '';
             const phones = [phonetic, usphone].filter(p => p).join('  ');
+            if (phones) parts.push(phones);
             
-            // 获取所有释义
-            const meanings = entries.trs.map(tr => {
-                const pos = tr.pos ? `【${tr.pos}】` : ''; // 词性
-                const def = tr.tr[0].l.i[0];              // 中文释义
-                return `${pos} ${def}`;
-            });
+            // 获取释义
+            if (entries.trs) {
+                const meanings = entries.trs.map(tr => {
+                    const pos = tr.pos ? `【${tr.pos}】` : ''; // 词性
+                    const def = tr.tr[0].l.i[0];              // 中文释义
+                    return `${pos} ${def}`;
+                });
+                parts.push(meanings.join('\n'));
+            }
+
+            // 获取例句（如果有）
+            if (data.blng_sents_part?.sentence) {
+                const sentences = data.blng_sents_part.sentence
+                    .slice(0, 2)  // 只取前两个例句
+                    .map(sent => {
+                        return `例句：\n${sent.sentence}\n${sent.sentence_translation}`;
+                    });
+                if (sentences.length > 0) {
+                    parts.push('\n例句：\n' + sentences.join('\n\n'));
+                }
+            }
             
-            // 组合音标和释义
-            translation = phones ? `${phones}\n\n${meanings.join('\n')}` : meanings.join('\n');
+            translation = parts.join('\n\n');
         }
         
         // 如果找不到释义，返回提示
