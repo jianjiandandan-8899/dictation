@@ -10,6 +10,9 @@ let isPlaying = false;
 // 添加记录答案的数组
 let userAnswers = [];
 
+// 添加翻译缓存
+const translationCache = new Map();
+
 const userInput = document.getElementById('userInput');
 const feedback = document.getElementById('feedback');
 const prevPageBtn = document.getElementById('prevPage');
@@ -249,16 +252,66 @@ document.getElementById('pageJump').addEventListener('keypress', (e) => {
     }
 });
 
-// 更新单词列表的函数
+// 修改获取翻译的函数
+async function getTranslation(word) {
+    if (translationCache.has(word)) {
+        return translationCache.get(word);
+    }
+
+    try {
+        const response = await fetch(`/translate/${encodeURIComponent(word)}`);
+        const data = await response.json();
+        
+        // 格式化翻译内容
+        let formattedTranslation = '';
+        if (data.translation) {
+            const meanings = data.translation.split('\n').filter(line => line.trim());
+            formattedTranslation = meanings.map(meaning => {
+                // 处理词性标记
+                meaning = meaning.replace(/^(noun|verb|adjective|adverb):/i, (match) => {
+                    return `【${match.slice(0, -1)}】`;  // 使用中文方括号包裹词性
+                });
+                // 清理多余的空格和标点
+                meaning = meaning.replace(/\s+/g, ' ').trim();
+                return meaning;
+            }).join('\n\n');  // 使用双换行分隔不同释义
+        }
+        
+        translationCache.set(word, formattedTranslation);
+        return formattedTranslation;
+    } catch (error) {
+        console.error('获取翻译失败:', error);
+        return '';
+    }
+}
+
+// 修改更新单词列表的函数
 function updateWordList(words, currentPage, totalPages) {
     const wordListUl = document.getElementById('currentWords');
     wordListUl.innerHTML = words.map((word, index) => 
         `<li>
             <span class="word-index">${index + 1}. </span>
-            <span class="word-text" onmouseover="speakWord('${word}')">${word}</span>
-            <span class="word-stars" onmouseover="speakWord('${word}')">${'*'.repeat(word.length)}</span>
+            <span class="word-text" 
+                onmouseover="speakWord('${word}')"
+                data-word="${word}"
+                data-tooltip="">${word}</span>
+            <span class="word-stars" 
+                onmouseover="speakWord('${word}')">${'*'.repeat(word.length)}</span>
         </li>`
     ).join('');
+
+    // 添加悬停事件监听器
+    const wordElements = wordListUl.querySelectorAll('.word-text');
+    wordElements.forEach(element => {
+        element.addEventListener('mouseenter', async function() {
+            const word = this.dataset.word;
+            const translation = await getTranslation(word);
+            if (translation) {
+                this.dataset.tooltip = translation;
+                this.classList.add('show-tooltip');
+            }
+        });
+    });
     
     prevPageBtn.disabled = currentPage <= 1;
     nextPageBtn.disabled = currentPage >= totalPages;

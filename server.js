@@ -4,6 +4,7 @@ const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 const path = require('path');
 const fs = require('fs');
+const axios = require('axios');  // 需要先安装: npm install axios
 
 app.use(express.static('public'));
 app.set('view engine', 'ejs');
@@ -83,6 +84,37 @@ app.get('/', (req, res) => {
     } catch (error) {
         console.error('路由处理错误:', error);
         res.status(500).send('服务器错误');
+    }
+});
+
+// 修改为有道词典 API
+app.get('/translate/:word', async (req, res) => {
+    try {
+        const word = req.params.word;
+        const response = await axios.get('https://fanyi.youdao.com/openapi.do', {
+            params: {
+                keyfrom: 'node-translator',
+                key: '2058911035',
+                type: 'data',
+                doctype: 'json',
+                version: '1.1',
+                q: word
+            }
+        });
+        
+        let translation = '';
+        if (response.data?.basic?.explains) {
+            // 获取基本释义
+            translation = response.data.basic.explains.join('\n');
+        } else if (response.data?.translation) {
+            // 如果没有详细释义，使用简单翻译
+            translation = response.data.translation.join('\n');
+        }
+        
+        res.json({ translation: translation || '未找到释义' });
+    } catch (error) {
+        console.error('翻译查询错误:', error);
+        res.status(500).json({ error: '查询失败' });
     }
 });
 
