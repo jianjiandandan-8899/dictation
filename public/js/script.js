@@ -10,6 +10,9 @@ let isPlaying = false;
 // 添加记录答案的数组
 let userAnswers = [];
 
+// 添加翻译缓存
+const translationCache = new Map();
+
 const userInput = document.getElementById('userInput');
 const feedback = document.getElementById('feedback');
 const prevPageBtn = document.getElementById('prevPage');
@@ -249,10 +252,7 @@ document.getElementById('pageJump').addEventListener('keypress', (e) => {
     }
 });
 
-<<<<<<< Updated upstream
-// 更新单词列表的函数
-=======
-// 修改获取翻译的函数
+// 添加获取翻译的函数
 async function getTranslation(word) {
     if (translationCache.has(word)) {
         return translationCache.get(word);
@@ -280,16 +280,41 @@ async function getTranslation(word) {
 }
 
 // 修改更新单词列表的函数
->>>>>>> Stashed changes
 function updateWordList(words, currentPage, totalPages) {
     const wordListUl = document.getElementById('currentWords');
     wordListUl.innerHTML = words.map((word, index) => 
         `<li>
             <span class="word-index">${index + 1}. </span>
-            <span class="word-text" onmouseover="speakWord('${word}')">${word}</span>
-            <span class="word-stars" onmouseover="speakWord('${word}')">${'*'.repeat(word.length)}</span>
+            <span class="word-text" 
+                data-word="${word}">${word}</span>
+            <span class="word-stars">${'*'.repeat(word.length)}</span>
         </li>`
     ).join('');
+
+    // 添加悬停事件监听器
+    const wordElements = wordListUl.querySelectorAll('.word-text');
+    wordElements.forEach(element => {
+        // 添加发音事件
+        element.addEventListener('mouseover', () => {
+            speakWord(element.dataset.word);
+        });
+
+        // 添加翻译事件
+        element.addEventListener('mouseenter', async function() {
+            console.log('Mouse entered:', this.dataset.word); // 调试日志
+            const word = this.dataset.word;
+            try {
+                const translation = await getTranslation(word);
+                console.log('Translation received:', translation); // 调试日志
+                if (translation) {
+                    this.setAttribute('data-tooltip', translation);
+                    this.classList.add('show-tooltip');
+                }
+            } catch (error) {
+                console.error('获取翻译失败:', error);
+            }
+        });
+    });
     
     prevPageBtn.disabled = currentPage <= 1;
     nextPageBtn.disabled = currentPage >= totalPages;

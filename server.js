@@ -4,6 +4,7 @@ const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 const path = require('path');
 const fs = require('fs');
+const axios = require('axios');  // 需要先安装: npm install axios
 
 app.use(express.static('public'));
 app.set('view engine', 'ejs');
@@ -83,6 +84,48 @@ app.get('/', (req, res) => {
     } catch (error) {
         console.error('路由处理错误:', error);
         res.status(500).send('服务器错误');
+    }
+});
+
+// 添加有道词典查询路由
+app.get('/translate/:word', async (req, res) => {
+    try {
+        const word = req.params.word;
+        // 使用有道词典查询接口
+        const response = await axios.get(`https://dict.youdao.com/jsonapi?q=${encodeURIComponent(word)}`, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Referer': 'https://dict.youdao.com'
+            }
+        });
+        
+        let translation = '';
+        const data = response.data;
+        
+        // 获取词性和释义
+        if (data?.ec?.word?.[0]?.trs) {
+            const entries = data.ec.word[0];
+            // 获取音标（如果有）
+            const phonetic = entries.ukphone ? `英 [${entries.ukphone}]` : '';
+            const usphone = entries.usphone ? `美 [${entries.usphone}]` : '';
+            const phones = [phonetic, usphone].filter(p => p).join('  ');
+            
+            // 获取所有释义
+            const meanings = entries.trs.map(tr => {
+                const pos = tr.pos ? `【${tr.pos}】` : ''; // 词性
+                const def = tr.tr[0].l.i[0];              // 中文释义
+                return `${pos} ${def}`;
+            });
+            
+            // 组合音标和释义
+            translation = phones ? `${phones}\n\n${meanings.join('\n')}` : meanings.join('\n');
+        }
+        
+        // 如果找不到释义，返回提示
+        res.json({ translation: translation || '未找到释义' });
+    } catch (error) {
+        console.error('翻译查询错误:', error);
+        res.status(500).json({ error: '查询失败' });
     }
 });
 
