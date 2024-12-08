@@ -1,0 +1,12 @@
+{
+  "watch": [
+    "server.js",
+    "views/",
+    "public/",
+    "word-dictation/"
+  ],
+  "ext": "js,json,ejs,html,css",
+  "ignore": [
+    "node_modules/"
+  ]
+} 

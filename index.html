@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>英文单词听写工具</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>英文单词听写</h1>
+        <div class="score">得分: <span id="score">0</span> / <span id="total">0</span></div>
+        
+        <div class="word-section">
+            <button id="playButton">播放单词</button>
+            <input type="text" id="userInput" placeholder="请输入听到的单词">
+            <button id="checkButton">检查</button>
+        </div>
+        
+        <div id="feedback" class="feedback"></div>
+        
+        <button id="nextButton" style="display: none;">下一个单词</button>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html> 
