@@ -138,16 +138,87 @@ app.get('/translate/:word', async (req, res) => {
             parts.push('中文释义:\n' + chineseDefs.join('\n'));
         }
 
-        // 4. 添加例句
-        if (cnResponse.data?.blng_sents_part?.sentence) {
-            const sentences = cnResponse.data.blng_sents_part.sentence
-                .slice(0, 2)  // 只取前两个例句
-                .map(sent => {
-                    return `• ${sent.sentence}\n  ${sent.sentence_translation}`;
-                });
-            if (sentences.length > 0) {
-                parts.push('例句:\n' + sentences.join('\n\n'));
+        // 4. 添加例句（从多个来源获取）
+        const sentences = [];
+        
+        try {
+            // 从有道词典获取双语例句（优先使用，因为有中文翻译）
+            if (cnResponse.data?.blng_sents_part?.sentence?.length > 0) {
+                const blngSents = cnResponse.data.blng_sents_part.sentence
+                    .slice(0, 2)
+                    .filter(sent => {
+                        return sent && typeof sent.sentence === 'string' && typeof sent.sentence_translation === 'string';
+                    })
+                    .map(sent => ({
+                        en: sent.sentence.trim(),
+                        cn: sent.sentence_translation.trim()
+                    }));
+                sentences.push(...blngSents);
             }
+            
+            // 如果还需要更多例句，从权威例句获取
+            if (sentences.length < 2 && cnResponse.data?.auth_sents_part?.sent?.length > 0) {
+                const authSents = cnResponse.data.auth_sents_part.sent
+                    .slice(0, 2 - sentences.length)
+                    .filter(sent => {
+                        return sent && typeof sent.sentence === 'string' && typeof sent.sentence_translation === 'string';
+                    })
+                    .map(sent => ({
+                        en: sent.sentence.trim(),
+                        cn: sent.sentence_translation.trim()
+                    }));
+                sentences.push(...authSents);
+            }
+            
+            // 如果还需要例句，尝试从英文词典获取并使用百度翻译API翻译
+            if (sentences.length < 2 && enResponse.data?.[0]?.meanings?.length > 0) {
+                for (const meaning of enResponse.data[0].meanings) {
+                    if (!Array.isArray(meaning?.definitions)) continue;
+                    
+                    for (const def of meaning.definitions) {
+                        if (typeof def?.example === 'string' && sentences.length < 2) {
+                            try {
+                                // 使用有道翻译API翻译例句
+                                const transResponse = await axios.get(`https://dict.youdao.com/jsonapi?q=${encodeURIComponent(def.example)}`, {
+                                    headers: {
+                                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                                        'Referer': 'https://dict.youdao.com'
+                                    }
+                                });
+                                
+                                const translation = transResponse.data?.fanyi?.trs?.[0]?.tr;
+                                sentences.push({
+                                    en: def.example.trim(),
+                                    cn: translation || '(暂无翻译)'
+                                });
+                            } catch (error) {
+                                console.error('翻译例句失败:', error);
+                                sentences.push({
+                                    en: def.example.trim(),
+                                    cn: '(暂无翻译)'
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 添加例句到输出
+            if (sentences.length > 0) {
+                const validSentences = sentences
+                    .filter(sent => sent && typeof sent.en === 'string')
+                    .map((sent, idx) => {
+                        const enText = sent.en;
+                        const cnText = `\n  ${sent.cn || '(暂无翻译)'}`;
+                        return `例句 ${idx + 1}:\n  ${enText}${cnText}`;
+                    });
+
+                if (validSentences.length > 0) {
+                    parts.push('\n例句:\n' + validSentences.join('\n\n'));
+                }
+            }
+        } catch (error) {
+            console.error('处理例句时出错:', error);
         }
 
         translation = parts.join('\n\n');
