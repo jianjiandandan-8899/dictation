@@ -194,7 +194,7 @@ async function autoPlay() {
 // 事件监听器
 document.getElementById('autoPlayButton').addEventListener('click', autoPlay);
 
-// 分页按钮事件
+// 分页按事件
 prevPageBtn.addEventListener('click', () => {
     if (isPlaying) {
         isPlaying = false;
@@ -291,12 +291,11 @@ function updateWordList(words, currentPage, totalPages) {
     wordListUl.innerHTML = words.map((word, index) => 
         `<li>
             <span class="word-index">${index + 1}. </span>
-            <span class="word-text" 
-                onmouseover="speakWord('${word}')"
-                data-word="${word}"
-                data-tooltip="">${word}</span>
-            <span class="word-stars" 
-                onmouseover="speakWord('${word}')">${'*'.repeat(word.length)}</span>
+            <span class="word-text" onmouseover="speakWord('${word}')" data-word="${word}">
+                <span>${word}</span>
+                <div class="tooltip-container"></div>
+            </span>
+            <span class="word-stars">${'*'.repeat(word.length)}</span>
         </li>`
     ).join('');
 
@@ -305,10 +304,12 @@ function updateWordList(words, currentPage, totalPages) {
     wordElements.forEach(element => {
         element.addEventListener('mouseenter', async function() {
             const word = this.dataset.word;
-            const translation = await getTranslation(word);
-            if (translation) {
-                this.dataset.tooltip = translation;
-                this.classList.add('show-tooltip');
+            const tooltipContainer = this.querySelector('.tooltip-container');
+            if (!tooltipContainer.textContent) {  // 只在第一次悬停时获取翻译
+                const translation = await getTranslation(word);
+                if (translation) {
+                    tooltipContainer.textContent = translation;
+                }
             }
         });
     });
