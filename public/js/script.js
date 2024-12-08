@@ -191,7 +191,7 @@ async function autoPlay() {
 // 事件监听器
 document.getElementById('autoPlayButton').addEventListener('click', autoPlay);
 
-// 分页按钮事件
+// 分页按��事件
 prevPageBtn.addEventListener('click', () => {
     if (isPlaying) {
         isPlaying = false;
@@ -249,7 +249,38 @@ document.getElementById('pageJump').addEventListener('keypress', (e) => {
     }
 });
 
+<<<<<<< Updated upstream
 // 更新单词列表的函数
+=======
+// 修改获取翻译的函数
+async function getTranslation(word) {
+    if (translationCache.has(word)) {
+        return translationCache.get(word);
+    }
+
+    try {
+        const response = await fetch(`/translate/${encodeURIComponent(word)}`);
+        const data = await response.json();
+        
+        // 格式化翻译内容
+        let formattedTranslation = '';
+        if (data.translation) {
+            formattedTranslation = data.translation
+                .split('\n')
+                .filter(line => line.trim())
+                .join('\n');
+        }
+        
+        translationCache.set(word, formattedTranslation);
+        return formattedTranslation;
+    } catch (error) {
+        console.error('获取翻译失败:', error);
+        return '';
+    }
+}
+
+// 修改更新单词列表的函数
+>>>>>>> Stashed changes
 function updateWordList(words, currentPage, totalPages) {
     const wordListUl = document.getElementById('currentWords');
     wordListUl.innerHTML = words.map((word, index) => 
