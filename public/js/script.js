@@ -194,7 +194,7 @@ async function autoPlay() {
 // 事件监听器
 document.getElementById('autoPlayButton').addEventListener('click', autoPlay);
 
-// 分页按事件
+// 分页按��件
 prevPageBtn.addEventListener('click', () => {
     if (isPlaying) {
         isPlaying = false;
@@ -299,18 +299,46 @@ function updateWordList(words, currentPage, totalPages) {
         </li>`
     ).join('');
 
-    // 添加悬停事件监听器
+    // 添加事件监听器
     const wordElements = wordListUl.querySelectorAll('.word-text');
     wordElements.forEach(element => {
+        const tooltipContainer = element.querySelector('.tooltip-container');
+        
+        // 鼠标进入单词时
         element.addEventListener('mouseenter', async function() {
-            const word = this.dataset.word;
-            const tooltipContainer = this.querySelector('.tooltip-container');
-            if (!tooltipContainer.textContent) {  // 只在第一次悬停时获取翻译
-                const translation = await getTranslation(word);
+            // 隐藏所有其他的工具提示
+            document.querySelectorAll('.tooltip-container.active').forEach(tip => {
+                if (tip !== tooltipContainer) {
+                    tip.classList.remove('active');
+                }
+            });
+
+            // 获取并显示当前单词的释义
+            if (!tooltipContainer.textContent) {
+                const translation = await getTranslation(this.dataset.word);
                 if (translation) {
                     tooltipContainer.textContent = translation;
                 }
             }
+            tooltipContainer.classList.add('active');
+        });
+
+        // 鼠标离开单词和工具提示时
+        element.addEventListener('mouseleave', function(e) {
+            // 检查鼠标是否移动到了工具提示上
+            if (!tooltipContainer.contains(e.relatedTarget)) {
+                setTimeout(() => {
+                    // 如果鼠标不在工具提示上，则隐藏
+                    if (!tooltipContainer.matches(':hover')) {
+                        tooltipContainer.classList.remove('active');
+                    }
+                }, 100);
+            }
+        });
+
+        // 工具提示的鼠标事件
+        tooltipContainer.addEventListener('mouseleave', function() {
+            tooltipContainer.classList.remove('active');
         });
     });
     
