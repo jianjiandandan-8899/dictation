@@ -1,15 +1,5 @@
-abandon /əˈbændən/ [v] 放弃；遗弃
-ability /əˈbɪləti/ [n] 能力，才能
-able /ˈeɪbl/ [adj] 能够的；有能力的
-abroad /əˈbrɔːd/ [adv] 在国外；海外
-absolute /ˈæbsəluːt/ [adj] 绝对的；完全的
-absolutely /ˈæbsəluːtli/ [adv] 完全地；绝对地
-absorb /əbˈsɔːb/ [v] 吸收；吸引
-abstract /ˈæbstrækt/ [adj] 抽象的；理论的
-academic /ˌækəˈdemɪk/ [adj] 学术的；理论的
-accent /ˈæksent/ [n] 口音；重音
-accept /əkˈsept/ [v] 接受；同意
-acceptable /əkˈseptəbl/ [adj] 可接受的
-access /ˈækses/ [n] 通道；使用权
-accident /ˈæksɪdənt/ [n] 事故；意外
-accommodate /əˈkɒmədeɪt/ [v] 容纳；适应 
+Word List
+apple
+banana
+orange
+// ... 其他单词 

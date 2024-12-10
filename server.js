@@ -50,7 +50,7 @@ function parseWordList(content) {
 
 try {
     // 读取单词列表
-    const wordListContent = fs.readFileSync('word-dictation/wordlist.txt', 'utf8');
+    const wordListContent = fs.readFileSync(path.join(__dirname, 'wordlist.txt'), 'utf8');
     words = parseWordList(wordListContent);
     
     if (words.length === 0) {
@@ -58,7 +58,7 @@ try {
     }
 } catch (error) {
     console.error('读取单词表文件失败:', error);
-    process.exit(1);
+    words = [];  // 使用空数组作为后备
 }
 
 // 路由
@@ -77,7 +77,7 @@ app.get('/', (req, res) => {
             currentPage: validPage,
             totalPages,
             totalWords: words.length,
-            pageSize: 20,  // 直接使��固定值
+            pageSize: 20,  // 直接使用固定值
             pageWords: pageWords || []
         });
     } catch (error) {

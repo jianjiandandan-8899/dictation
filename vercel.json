@@ -4,6 +4,10 @@
     {
       "src": "server.js",
       "use": "@vercel/node"
+    },
+    {
+      "src": "wordlist.txt",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
