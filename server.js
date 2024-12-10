@@ -92,136 +92,97 @@ app.get('/translate/:word', async (req, res) => {
     try {
         const word = req.params.word;
         
-        // 获取英文释义
-        const enResponse = await axios.get(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
-        
-        // 获取中文释义和例句
-        const cnResponse = await axios.get(`https://dict.youdao.com/jsonapi?q=${encodeURIComponent(word)}`, {
+        // 使用有道词典 API
+        const response = await axios.get(`https://dict.youdao.com/jsonapi?q=${encodeURIComponent(word)}&doctype=json&keyfrom=mac.main&id=4E9D17E24A7087A5CA842577D0B3B9B5&vendor=mac.main.dict&appVer=2.1.1&client=mac&le=eng`, {
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'User-Agent': 'YoudaoDict/2.1.1 (Mac OS X Version 10.15.7 (Build 19H2))',
                 'Referer': 'https://dict.youdao.com'
             }
         });
-        
-        let translation = '';
-        const parts = [];
 
+        const parts = [];
+        
         // 1. 添加音标
-        if (cnResponse.data?.ec?.word?.[0]) {
-            const entries = cnResponse.data.ec.word[0];
+        if (response.data?.ec?.word?.[0]) {
+            const entries = response.data.ec.word[0];
             const ukphone = entries.ukphone ? `英 [${entries.ukphone}]` : '';
             const usphone = entries.usphone ? `美 [${entries.usphone}]` : '';
             const phones = [ukphone, usphone].filter(p => p).join('  ');
             if (phones) parts.push(phones);
         }
 
-        // 2. 添加英文释义
-        if (enResponse.data?.[0]?.meanings) {
-            const englishDefs = enResponse.data[0].meanings.map(meaning => {
-                const pos = meaning.partOfSpeech;
-                const defs = meaning.definitions
-                    .slice(0, 2)  // 每个词性只取前两个释义
-                    .map(def => def.definition)
-                    .join('; ');
-                return `【${pos}】 ${defs}`;
-            });
-            parts.push('English Definitions:\n' + englishDefs.join('\n'));
-        }
-
-        // 3. 添加中文释义
-        if (cnResponse.data?.ec?.word?.[0]?.trs) {
-            const chineseDefs = cnResponse.data.ec.word[0].trs.map(tr => {
-                const pos = tr.pos ? `【${tr.pos}】` : '';
-                const def = tr.tr[0].l.i[0];
-                return `${pos} ${def}`;
-            });
-            parts.push('中文释义:\n' + chineseDefs.join('\n'));
-        }
-
-        // 4. 添加例句（从多个来源获取）
-        const sentences = [];
-        
-        try {
-            // 从有道词典获取双语例句（优先使用，因为有中文翻译）
-            if (cnResponse.data?.blng_sents_part?.sentence?.length > 0) {
-                const blngSents = cnResponse.data.blng_sents_part.sentence
-                    .slice(0, 2)
-                    .filter(sent => {
-                        return sent && typeof sent.sentence === 'string' && typeof sent.sentence_translation === 'string';
-                    })
-                    .map(sent => ({
-                        en: sent.sentence.trim(),
-                        cn: sent.sentence_translation.trim()
-                    }));
-                sentences.push(...blngSents);
-            }
+        // 2. 添加柯林斯英文释义
+        if (response.data?.collins?.collins_entries) {
+            const englishDefs = [];
             
-            // 如果还需要更多例句，从权威例句获取
-            if (sentences.length < 2 && cnResponse.data?.auth_sents_part?.sent?.length > 0) {
-                const authSents = cnResponse.data.auth_sents_part.sent
-                    .slice(0, 2 - sentences.length)
-                    .filter(sent => {
-                        return sent && typeof sent.sentence === 'string' && typeof sent.sentence_translation === 'string';
-                    })
-                    .map(sent => ({
-                        en: sent.sentence.trim(),
-                        cn: sent.sentence_translation.trim()
-                    }));
-                sentences.push(...authSents);
-            }
-            
-            // 如果还需要例句，尝试从英文词典获取并使用百度翻译API翻译
-            if (sentences.length < 2 && enResponse.data?.[0]?.meanings?.length > 0) {
-                for (const meaning of enResponse.data[0].meanings) {
-                    if (!Array.isArray(meaning?.definitions)) continue;
-                    
-                    for (const def of meaning.definitions) {
-                        if (typeof def?.example === 'string' && sentences.length < 2) {
-                            try {
-                                // 使用有道翻译API翻译例句
-                                const transResponse = await axios.get(`https://dict.youdao.com/jsonapi?q=${encodeURIComponent(def.example)}`, {
-                                    headers: {
-                                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                                        'Referer': 'https://dict.youdao.com'
-                                    }
-                                });
-                                
-                                const translation = transResponse.data?.fanyi?.trs?.[0]?.tr;
-                                sentences.push({
-                                    en: def.example.trim(),
-                                    cn: translation || '(暂无翻译)'
-                                });
-                            } catch (error) {
-                                console.error('翻译例句失败:', error);
-                                sentences.push({
-                                    en: def.example.trim(),
-                                    cn: '(暂无翻译)'
-                                });
+            response.data.collins.collins_entries.forEach((entry, idx) => {
+                if (!entry.value || idx >= 3) return; // 最多显示3个释义
+                
+                // 处理柯林斯释义
+                const meanings = entry.value.split(/\d+\.\s+/)
+                    .filter(m => m.trim())
+                    .map((meaning, mIdx) => {
+                        let def = `${mIdx + 1}. `;
+                        
+                        // 提取词性和释义
+                        const posMatch = meaning.match(/^(\w+\.)\s+(.+?)(?=\s+例：|\s*$)/);
+                        if (posMatch) {
+                            def += `【${posMatch[1]}】${posMatch[2].trim()}`;
+                        } else {
+                            def += meaning.trim();
+                        }
+
+                        // 提取例句
+                        const exampleMatch = meaning.match(/例：(.+?)(?=\s+翻译：|\s*$)/);
+                        const translationMatch = meaning.match(/翻译：(.+?)$/);
+                        
+                        if (exampleMatch) {
+                            def += `\n   例: ${exampleMatch[1].trim()}`;
+                            if (translationMatch) {
+                                def += `\n   译: ${translationMatch[1].trim()}`;
                             }
                         }
-                    }
-                }
-            }
 
-            // 添加例句到输出
-            if (sentences.length > 0) {
-                const validSentences = sentences
-                    .filter(sent => sent && typeof sent.en === 'string')
-                    .map((sent, idx) => {
-                        const enText = sent.en;
-                        const cnText = `\n  ${sent.cn || '(暂无翻译)'}`;
-                        return `例句 ${idx + 1}:\n  ${enText}${cnText}`;
+                        return def;
                     });
+                
+                englishDefs.push(...meanings);
+            });
 
-                if (validSentences.length > 0) {
-                    parts.push('\n例句:\n' + validSentences.join('\n\n'));
-                }
+            if (englishDefs.length > 0) {
+                parts.push('Collins:\n' + englishDefs.join('\n\n'));
             }
-        } catch (error) {
-            console.error('处理例句时出错:', error);
         }
 
-        translation = parts.join('\n\n');
+        // 3. 添加简明中文释义
+        if (response.data?.ec?.word?.[0]?.trs) {
+            const entries = response.data.ec.word[0];
+            const translations = entries.trs
+                .map(tr => {
+                    const pos = tr.pos ? `【${tr.pos}】` : '';
+                    return `${pos}${tr.tr[0].l.i[0]}`;
+                })
+                .join('\n');
+            parts.push('中文释义:\n' + translations);
+        }
+
+        // 4. 添加双语例句
+        if (response.data?.blng_sents_part?.sentence) {
+            const sentences = response.data.blng_sents_part.sentence
+                .slice(0, 2)  // 只取前两个例句
+                .map((sent, idx) => {
+                    return `例句 ${idx + 1}:\n  ${sent.sentence}\n  ${sent.sentence_translation}`;
+                })
+                .join('\n\n');
+            if (sentences) {
+                parts.push('\n例句:\n' + sentences);
+            }
+        }
+
+        // 添加调试日志
+        console.log('API Response:', JSON.stringify(response.data, null, 2));
+
+        const translation = parts.join('\n\n');
         res.json({ translation: translation || '未找到释义' });
     } catch (error) {
         console.error('翻译查询错误:', error);
@@ -229,7 +190,7 @@ app.get('/translate/:word', async (req, res) => {
     }
 });
 
-// Socket.io 连接处理
+// Socket.io 连接处
 io.on('connection', (socket) => {
     console.log('用户已连接');
     
