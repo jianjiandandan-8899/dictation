@@ -121,7 +121,8 @@ io.on('connection', (socket) => {
 });
 
 // 启动服务器
-const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => {
-    console.log(`服务器运行在 http://localhost:${PORT}`);
+const port = process.env.PORT || 3000;
+
+app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
 }); 

@@ -4,8 +4,7 @@
   "description": "English word dictation tool",
   "main": "server.js",
   "scripts": {
-    "build": "next build",
-    "start": "next start",
+    "start": "node server.js",
     "dev": "nodemon server.js --watch server.js --watch views/ --watch public/"
   },
   "keywords": [],
