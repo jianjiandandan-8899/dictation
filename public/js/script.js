@@ -44,10 +44,28 @@ function resetUI() {
 
 // 语音合成函数
 async function speakWord(word) {
+    // 确保语音合成对象已初始化
+    if (!window.speechSynthesis) {
+        console.error('语音合成不可用');
+        return;
+    }
+
+    // 停止当前正在播放的语音
+    speechSynthesis.cancel();
+
     const utterance = new SpeechSynthesisUtterance(word);
     
     // 获取可用的语音列表
     const voices = speechSynthesis.getVoices();
+    
+    // 如果语音列表为空，等待加载
+    if (voices.length === 0) {
+        await new Promise(resolve => {
+            speechSynthesis.onvoiceschanged = () => {
+                resolve(speechSynthesis.getVoices());
+            };
+        });
+    }
     
     // 优先选择更自然的语音
     const preferredVoices = [
@@ -79,25 +97,35 @@ async function speakWord(word) {
     // 设置语音参数
     utterance.voice = selectedVoice;
     utterance.lang = 'en-US';
-    utterance.rate = 0.85;      // 稍微放慢速度
+    utterance.rate = 0.8;       // 更慢一点
     utterance.pitch = 1.0;      // 正常音调
     utterance.volume = 1.0;     // 最大音量
 
-    // 如果正在播放其他内容，先停止
-    speechSynthesis.cancel();
-    
     // 开始播放
     speechSynthesis.speak(utterance);
 
     // 等待播放完成
     return new Promise(resolve => {
         utterance.onend = resolve;
+        utterance.onerror = (event) => {
+            console.error('语音合成错误:', event);
+            resolve();
+        };
     });
 }
 
 // 自动播放功能
 async function autoPlay() {
     const autoPlayButton = document.getElementById('autoPlayButton');
+    
+    // 尝试初始化语音合成
+    try {
+        await speakWord('test');
+    } catch (error) {
+        console.error('语音合成初始化失败:', error);
+        alert('语音合成初始化失败，请检查浏览器设置。');
+        return;
+    }
     
     if (isPlaying) {
         isPlaying = false;
@@ -301,6 +329,11 @@ document.addEventListener('DOMContentLoaded', () => {
             })));
         };
     }
+    if (!window.speechSynthesis) {
+        console.error('浏览器不支持语音合成');
+        alert('您的浏览器不支持语音合成功能，请使用现代浏览器。');
+        return;
+    }
 });
 
 // 添加显示总结的函数
@@ -396,7 +429,7 @@ function checkAnswer() {
         // 如果是最后一个单词，显示总结
         showPageSummary();
     } else {
-        // 否则继续下一个单词
+        // 否则继��下一个单词
         currentWordIndex++;
         resetUI();
     }

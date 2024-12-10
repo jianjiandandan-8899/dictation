@@ -6,14 +6,21 @@
       "use": "@vercel/node"
     },
     {
-      "src": "wordlist.txt",
+      "src": "public/**",
       "use": "@vercel/static"
     }
   ],
   "routes": [
     {
       "src": "/socket.io/(.*)",
+      "headers": {
+        "Access-Control-Allow-Origin": "*"
+      },
       "dest": "/server.js"
+    },
+    {
+      "src": "/public/(.*)",
+      "dest": "/public/$1"
     },
     {
       "src": "/(.*)",
