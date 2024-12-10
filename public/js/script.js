@@ -334,3 +334,70 @@ function showSummary() {
     
     feedback.innerHTML = summaryHTML;
 }
+
+function showPageSummary() {
+    // 隐藏输入区域
+    document.querySelector('.word-section').style.display = 'none';
+    
+    // 创建总结HTML
+    let summaryHTML = `
+        <div class="summary-container">
+            <h3>本页听写总结</h3>
+            <table class="summary-table">
+                <thead>
+                    <tr>
+                        <th>序号</th>
+                        <th>正确单词</th>
+                        <th>你的答案</th>
+                        <th>结果</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    words.forEach((word, index) => {
+        const userAnswer = userAnswers[index] || { word: word, userAnswer: '(未作答)', isCorrect: false };
+        const resultClass = userAnswer.isCorrect ? 'correct' : 'incorrect';
+        const resultMark = userAnswer.isCorrect ? '✓' : '✗';
+        
+        summaryHTML += `
+            <tr class="${resultClass}">
+                <td>${index + 1}</td>
+                <td>${word}</td>
+                <td>${userAnswer.userAnswer}</td>
+                <td>${resultMark}</td>
+            </tr>
+        `;
+    });
+    
+    // 计算正确率
+    const correctCount = userAnswers.filter(a => a.isCorrect).length;
+    const accuracy = ((correctCount / words.length) * 100).toFixed(1);
+    
+    summaryHTML += `
+            </tbody>
+        </table>
+        <div class="summary-stats">
+            <p>正确率: ${accuracy}% (${correctCount}/${words.length})</p>
+        </div>
+        <div class="summary-actions">
+            <button onclick="startNextPage()">下一页</button>
+        </div>
+    </div>`;
+    
+    feedback.innerHTML = summaryHTML;
+}
+
+// 在最后一个单词检查完后调用showPageSummary
+function checkAnswer() {
+    // ... existing check answer code ...
+    
+    if (currentWordIndex >= words.length - 1) {
+        // 如果是最后一个单词，显示总结
+        showPageSummary();
+    } else {
+        // 否则继续下一个单词
+        currentWordIndex++;
+        resetUI();
+    }
+}
