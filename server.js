@@ -77,7 +77,7 @@ app.get('/', (req, res) => {
             currentPage: validPage,
             totalPages,
             totalWords: words.length,
-            pageSize: 20,  // 直接使用固定值
+            pageSize: 20,  // 直接使��固定值
             pageWords: pageWords || []
         });
     } catch (error) {
@@ -123,6 +123,6 @@ io.on('connection', (socket) => {
 // 启动服务器
 const port = process.env.PORT || 3000;
 
-app.listen(port, () => {
+http.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 }); 
